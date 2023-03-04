@@ -1,132 +1,50 @@
+import * as chains from "wagmi/chains";
 import { Network } from "@ethersproject/networks";
 
-type TChainAttributes = {
-  name: string;
+export type TChainAttributes = {
   // color | [lightThemeColor, darkThemeColor]
   color: string | [string, string];
-  chainId: number;
 };
 
-export const NETWORKS: Record<string, TChainAttributes> = {
-  localhost: {
-    name: "localhost",
-    color: ["#666666", "#bbbbbb"],
-    chainId: 31337,
+export const NETWORKS_EXTRA_DATA: Record<string, TChainAttributes> = {
+  [chains.hardhat.id]: {
+    color: "#b8af0c",
   },
-  mainnet: {
-    name: "mainnet",
+  [chains.mainnet.id]: {
     color: "#ff8b9e",
-    chainId: 1,
   },
-  goerli: {
-    name: "goerli",
+  [chains.sepolia.id]: {
+    color: ["#5f4bb6", "#87ff65"],
+  },
+  [chains.goerli.id]: {
     color: "#0975F6",
-    chainId: 5,
   },
-  gnosis: {
-    name: "gnosis",
+  [chains.gnosis.id]: {
     color: "#48a9a6",
-    chainId: 100,
   },
-  polygon: {
-    name: "polygon",
+  [chains.polygon.id]: {
     color: "#2bbdf7",
-    chainId: 137,
   },
-  mumbai: {
-    name: "mumbai",
+  [chains.polygonMumbai.id]: {
     color: "#92D9FA",
-    chainId: 80001,
   },
-  localOptimismL1: {
-    name: "localOptimismL1",
+  [chains.optimismGoerli.id]: {
     color: "#f01a37",
-    chainId: 31337,
   },
-  localOptimism: {
-    name: "localOptimism",
+  [chains.optimism.id]: {
     color: "#f01a37",
-    chainId: 420,
   },
-  goerliOptimism: {
-    name: "goerliOptimism",
-    color: "#f01a37",
-    chainId: 420,
-  },
-  optimism: {
-    name: "optimism",
-    color: "#f01a37",
-    chainId: 10,
-  },
-  goerliArbitrum: {
-    name: "goerliArbitrum",
+  [chains.arbitrumGoerli.id]: {
     color: "#28a0f0",
-    chainId: 421613,
   },
-  arbitrum: {
-    name: "arbitrum",
+  [chains.arbitrum.id]: {
     color: "#28a0f0",
-    chainId: 42161,
   },
-  devnetArbitrum: {
-    name: "devnetArbitrum",
-    color: "#28a0f0",
-    chainId: 421612,
-  },
-  localAvalanche: {
-    name: "localAvalanche",
-    color: ["#666666", "#bbbbbb"],
-    chainId: 43112,
-  },
-  fujiAvalanche: {
-    name: "fujiAvalanche",
-    color: ["#666666", "#bbbbbb"],
-    chainId: 43113,
-  },
-  mainnetAvalanche: {
-    name: "mainnetAvalanche",
-    color: ["#666666", "#bbbbbb"],
-    chainId: 43114,
-  },
-  testnetHarmony: {
-    name: "testnetHarmony",
-    color: "#00b0ef",
-    chainId: 1666700000,
-  },
-  mainnetHarmony: {
-    name: "mainnetHarmony",
-    color: "#00b0ef",
-    chainId: 1666600000,
-  },
-  fantom: {
-    name: "fantom",
+  [chains.fantom.id]: {
     color: "#1969ff",
-    chainId: 250,
   },
-  testnetFantom: {
-    name: "testnetFantom",
+  [chains.fantomTestnet.id]: {
     color: "#1969ff",
-    chainId: 4002,
-  },
-  moonbeam: {
-    name: "moonbeam",
-    color: "#53CBC9",
-    chainId: 1284,
-  },
-  moonriver: {
-    name: "moonriver",
-    color: "#53CBC9",
-    chainId: 1285,
-  },
-  moonbaseAlpha: {
-    name: "moonbaseAlpha",
-    color: "#53CBC9",
-    chainId: 1287,
-  },
-  moonbeamDevNode: {
-    name: "moonbeamDevNode",
-    color: "#53CBC9",
-    chainId: 1281,
   },
 };
 
@@ -159,5 +77,17 @@ export function getBlockExplorerTxLink(network: Network, txnHash: string) {
   return blockExplorerTxURL;
 }
 
-export const getNetworkDetailsByChainId = (chainId: number) =>
-  Object.values(NETWORKS).find(val => val.chainId === chainId);
+/**
+ * Get the wagmi's Chain target network configured in the app.
+ */
+export const getTargetNetwork = () => {
+  const network = process.env.NEXT_PUBLIC_NETWORK as keyof typeof chains;
+
+  if (!network || !chains[network]) {
+    // If error defaults to hardhat local network
+    console.error("Network name is not set, misspelled or unsupported network used in .env.*");
+    return chains.hardhat;
+  }
+
+  return chains[network];
+};
