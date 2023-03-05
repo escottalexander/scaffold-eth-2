@@ -13,6 +13,12 @@ contract YourContract {
     using SafeERC20 for IERC20;
     // Events
     event ItemListed(bytes32 indexed hash, address poster, uint index, uint price, address tokenContract);
+    event ItemPriceUpdated(bytes32 indexed hash, address poster, uint index, uint newPrice);
+    event ItemCanceled(bytes32 indexed hash, address poster, uint index);
+    event ItemBought(bytes32 indexed hash, address poster, address buyer, uint index);
+    event ItemBuyCanceled(bytes32 indexed hash, address poster, address buyer, uint index);
+    event ItemSent(bytes32 indexed hash, address poster, uint index);
+    event ItemReceived(bytes32 indexed hash, address poster, uint index);
 
     // Structs
     // TODO: See if we can pack these in fewer storage slots by rearranging
@@ -28,7 +34,7 @@ contract YourContract {
     
     // State Variables
     mapping(address => mapping(uint => ItemListing)) itemListings;
-    mapping(address => uint) latestIndex;
+    mapping(address => uint) latestIndex; // TODO: Can't this be replaced by using an array? What am I missing?
     mapping(address => mapping(address => uint)) openCollateral;
     mapping(address => mapping(address => uint)) lockedCollateral;
 
@@ -44,11 +50,11 @@ contract YourContract {
             IERC20 token = IERC20(tokenContract);
             // TODO: Do we need to check allowance???
             //require(token.allowance(msg.sender, address(this)) >= price, "Token allowance for this contract too low);
-            token.safeTransferFrom(msg.sender, address(this), price);
-            openCollateral[msg.sender][tokenContract] += price;
+            token.safeTransferFrom(msg.sender, address(this), amount);
+            openCollateral[msg.sender][tokenContract] += amount;
         } else {
             // Must be native asset
-            require(msg.value >= price, "Not enough collateral to cover price");
+            require(msg.value >= amount, "Not enough collateral to cover price");
             (bool success,) = address(this).call{value: msg.value}("");
             require(success, "Failed to receive native asset");
             openCollateral[msg.sender][address(0x0)] += msg.value;
@@ -115,6 +121,24 @@ contract YourContract {
         ++ index;
     }
 
+    function updateListingPrice(uint itemIndex, uint newPrice) public {
+        ItemListing item = itemListings[msg.sender][itemIndex];
+        require(item.itemHash != '', "You have no items at that index");
+        require(item.buyer == address(0x0), "Someone has initiated buying this item, you cannot update it");
+
+        if (newPrice > item.price) {
+            // Add the difference between existing price and new price
+            checkAndAddLockedCollateral(newPrice - item.price, item.token);
+            item.price = newPrice;
+        } else if (newPrice < item.price) {
+            // Unlock the difference between existing price and new price
+            unlockCollateral(item.price - newPrice, item.token);
+            item.price = newPrice;
+        }
+
+        emit ItemPriceUpdated(item.itemHash, msg.sender, itemIndex, newPrice);
+    }
+
     function cancelListing(uint itemIndex) public {
         ItemListing item = itemListings[msg.sender][itemIndex];
         require(item.itemHash != '', "You have no items at that index");
@@ -122,7 +146,8 @@ contract YourContract {
 
         item.isCanceled = true;
         unlockCollateral(item.price, item.token);
-        // emit event
+        
+        emit ItemCanceled(item.itemHash, msg.sender, itemIndex);
     }
 
     function buyItem(address seller, uint itemIndex) public payable {
@@ -132,7 +157,8 @@ contract YourContract {
         // Check for collateral and add any remaining, adding 2x the amount since half is the payment and half is collateral
         checkAndAddLockedCollateral(item.price * 2, item.token);
         item.buyer = msg.sender;
-        // Emit event
+        
+        emit ItemBought(item.itemHash, seller, msg.sender, itemIndex);
     }
 
     function cancelBuy(address seller, uint itemIndex) public {
@@ -141,7 +167,8 @@ contract YourContract {
         require(item.buyer == msg.sender && !item.isSent, "Item has already been sent and can no longer be canceled");
         item.buyer = address(0x0);
         unlockCollateral(item.price * 2, item.token);
-        // Emit event
+        
+        emit ItemBuyCanceled(item.itemHash, seller, msg.sender, itemIndex);
     }
 
     function markItemSent(uint itemIndex) public {
@@ -150,8 +177,51 @@ contract YourContract {
         require(item.buyer != address(0x0), "Nobody has bought this item, you can't mark as sent");
 
         item.isSent = true;
-        // emit event
+        
+        emit ItemSent(item.itemHash, msg.sender, itemIndex);
     }
+
+    function markItemReceived(address seller, uint itemIndex) public {
+        ItemListing item = itemListings[seller][itemIndex];
+        require(item.buyer == msg.sender, "You are not the buyer");
+        require(item.isReceived == false, "Item has already been marked as received");
+        item.isReceived = true;
+        // Remove locked collateral from seller
+        lockedCollateral[seller][item.token] -= item.price;
+        // Remove locked collateral from buyer (they locked 2x the item price)
+        lockedCollateral[msg.sender][item.token] -= item.price * 2;
+        // Add open collateral to seller (notice how we are adding 2x the price, this is where the funds are moving from buyer to seller)
+        openCollateral[seller][item.token] += item.price * 2;
+        // Return initial collateral to buyer
+        openCollateral[msg.sender][item.token] += item.price;
+
+        emit ItemReceived(item.itemHash, seller, itemIndex);
+    }
+
+    function withdrawFunds(uint amount, address tokenContract) public {
+        require(openCollateral[msg.sender][tokenContract] >= amount, "You don't have that amount of funds available");
+        if (token != address(0x0)) {
+            IERC20 token = IERC20(tokenContract);
+            // TODO: Do we need to check allowance???
+            //require(token.allowance(msg.sender, address(this)) >= price, "Token allowance for this contract too low);
+            token.safeTransferFrom(address(this), msg.sender, amount);
+            openCollateral[msg.sender][tokenContract] -= amount;
+        } else {
+            // Must be native asset
+            (bool success,) = msg.sender.call{value: amount}("");
+            require(success, "Failed to send native asset");
+            openCollateral[msg.sender][address(0x0)] -= amount;
+        }
+    }
+
+    function checkOpenCollateral(address addr, address tokenContract) public view returns (uint) {
+        return openCollateral[addr][tokenContract];
+    }
+
+
+    // update price function
+    // Use SafeMath?
+    // accept any token for payment - how could we do this? Would require the abilty for buyer and seller to use different collaterals which gets hairy but might be possible with Uniswap oracles
 
     // State Variables
     address public immutable owner;
