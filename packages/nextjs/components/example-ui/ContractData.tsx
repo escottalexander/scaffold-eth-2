@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import Marquee from "react-fast-marquee";
-import { useScaffoldContractRead, useScaffoldEventSubscriber } from "~~/hooks/scaffold-eth";
-import { BigNumber } from "ethers";
-import { useAnimationConfig } from "~~/hooks/scaffold-eth/useAnimationConfig";
+import { useAnimationConfig, useScaffoldContractRead, useScaffoldEventSubscriber } from "~~/hooks/scaffold-eth";
 
 const MARQUEE_PERIOD_IN_SEC = 5;
 
-export default function ContractData() {
+export const ContractData = () => {
   const [transitionEnabled, setTransitionEnabled] = useState(true);
   const [isRightDirection, setIsRightDirection] = useState(false);
   const [marqueeSpeed, setMarqueeSpeed] = useState(0);
@@ -14,15 +12,22 @@ export default function ContractData() {
   const containerRef = useRef<HTMLDivElement>(null);
   const greetingRef = useRef<HTMLDivElement>(null);
 
-  const { data: totalCounter } = useScaffoldContractRead<BigNumber>("YourContract", "totalCounter");
+  const { data: totalCounter } = useScaffoldContractRead({
+    contractName: "YourContract",
+    functionName: "totalCounter",
+  });
 
-  const { data: currentGreeting, isLoading: isGreetingLoading } = useScaffoldContractRead<string>(
-    "YourContract",
-    "greeting",
-  );
+  const { data: currentGreeting, isLoading: isGreetingLoading } = useScaffoldContractRead({
+    contractName: "YourContract",
+    functionName: "greeting",
+  });
 
-  useScaffoldEventSubscriber("YourContract", "GreetingChange", (greetingSetter, newGreeting, premium, value) => {
-    console.log(greetingSetter, newGreeting, premium, value);
+  useScaffoldEventSubscriber({
+    contractName: "YourContract",
+    eventName: "GreetingChange",
+    listener: (greetingSetter, newGreeting, premium, value) => {
+      console.log(greetingSetter, newGreeting, premium, value);
+    },
   });
 
   const { showAnimation } = useAnimationConfig(totalCounter);
@@ -112,4 +117,4 @@ export default function ContractData() {
       </div>
     </div>
   );
-}
+};

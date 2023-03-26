@@ -1,15 +1,20 @@
+import { useState } from "react";
 import { CopyIcon } from "./assets/CopyIcon";
 import { DiamondIcon } from "./assets/DiamondIcon";
 import { HareIcon } from "./assets/HareIcon";
 import { ArrowSmallRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useState } from "react";
 import { useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
 
-export default function ContractInteraction() {
+export const ContractInteraction = () => {
   const [visible, setVisible] = useState(true);
   const [newGreeting, setNewGreeting] = useState("");
 
-  const { writeAsync, isLoading } = useScaffoldContractWrite("YourContract", "setGreeting", [newGreeting], "0.01");
+  const { writeAsync, isLoading } = useScaffoldContractWrite({
+    contractName: "YourContract",
+    functionName: "setGreeting",
+    args: [newGreeting],
+    value: "0.01",
+  });
 
   return (
     <div className="flex bg-base-300 relative pb-10">
@@ -78,4 +83,4 @@ export default function ContractInteraction() {
       </div>
     </div>
   );
-}
+};
