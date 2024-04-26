@@ -19,17 +19,17 @@ export const ContractData = () => {
   const greetingRef = useRef<HTMLDivElement>(null);
 
   const { data: totalCounter } = useScaffoldContractRead({
-    contractName: "YourContract",
+    contractName: "CollateralizedExchange",
     functionName: "totalCounter",
   });
 
   const { data: currentGreeting, isLoading: isGreetingLoading } = useScaffoldContractRead({
-    contractName: "YourContract",
+    contractName: "CollateralizedExchange",
     functionName: "greeting",
   });
 
   useScaffoldEventSubscriber({
-    contractName: "YourContract",
+    contractName: "CollateralizedExchange",
     eventName: "GreetingChange",
     listener: (greetingSetter, newGreeting, premium, value) => {
       console.log(greetingSetter, newGreeting, premium, value);

@@ -1,28 +1,28 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { YourContract } from "../typechain-types";
+import { CollateralizedExchange } from "../typechain-types";
 
-describe("YourContract", function () {
+describe("CollateralizedExchange", function () {
   // We define a fixture to reuse the same setup in every test.
 
-  let yourContract: YourContract;
+  let CollateralizedExchange: CollateralizedExchange;
   before(async () => {
     const [owner] = await ethers.getSigners();
-    const yourContractFactory = await ethers.getContractFactory("YourContract");
-    yourContract = (await yourContractFactory.deploy(owner.address)) as YourContract;
-    await yourContract.deployed();
+    const CollateralizedExchangeFactory = await ethers.getContractFactory("CollateralizedExchange");
+    CollateralizedExchange = (await CollateralizedExchangeFactory.deploy(owner.address)) as CollateralizedExchange;
+    await CollateralizedExchange.deployed();
   });
 
   describe("Deployment", function () {
     it("Should have the right message on deploy", async function () {
-      expect(await yourContract.greeting()).to.equal("Building Unstoppable Apps!!!");
+      expect(await CollateralizedExchange.greeting()).to.equal("Building Unstoppable Apps!!!");
     });
 
     it("Should allow setting a new message", async function () {
       const newGreeting = "Learn Scaffold-ETH 2! :)";
 
-      await yourContract.setGreeting(newGreeting);
-      expect(await yourContract.greeting()).to.equal(newGreeting);
+      await CollateralizedExchange.setGreeting(newGreeting);
+      expect(await CollateralizedExchange.greeting()).to.equal(newGreeting);
     });
   });
 });
